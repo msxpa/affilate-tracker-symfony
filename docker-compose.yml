@@ -1,0 +1,126 @@
+services:
+  # --- Nginx ---
+  nginx:
+    image: nginx:alpine
+    container_name: tracker_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./backend:/var/www/html
+      # Конфиг Nginx лежит в отдельной папке (создадим её позже)
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - php
+    networks:
+      - app-network
+
+  # --- PHP-FPM ---
+  php:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: tracker_php
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      # Внутренние адреса для связи между контейнерами
+      DATABASE_URL: "postgresql://tracker:secret@database:5432/tracker?serverVersion=15&charset=utf8"
+      REDIS_URL: "redis://redis:6379"
+      MESSENGER_TRANSPORT_DSN: "amqp://tracker:secret@rabbitmq:5672/%2f"
+    depends_on:
+      - database
+      - redis
+      - rabbitmq
+    networks:
+      - app-network
+
+  # --- Воркер Messenger (для батчевой обработки) ---
+  worker:
+    build:
+      context: ./docker/php
+      dockerfile: Dockerfile
+    container_name: tracker_worker
+    # Команда для запуска обработки очередей
+    command: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M -vv
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      DATABASE_URL: "postgresql://tracker:secret@database:5432/tracker?serverVersion=15&charset=utf8"
+      REDIS_URL: "redis://redis:6379"
+      MESSENGER_TRANSPORT_DSN: "amqp://tracker:secret@rabbitmq:5672/%2f"
+    depends_on:
+      - database
+      - redis
+      - rabbitmq
+    networks:
+      - app-network
+
+  # --- PostgreSQL ---
+  database:
+    image: postgres:15-alpine
+    container_name: tracker_database
+    environment:
+      POSTGRES_DB: tracker
+      POSTGRES_USER: tracker
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      # Сохраняем данные БД, чтобы не терять их при перезапуске
+      - ./docker/volumes/postgres:/var/lib/postgresql/data
+    healthcheck:
+      # Ждём готовности Postgres перед запуском зависимых сервисов
+      test: ["CMD-SHELL", "pg_isready -U tracker -d tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app-network
+
+  # --- Redis ---
+  redis:
+    image: redis:7-alpine
+    container_name: tracker_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./docker/volumes/redis:/data
+    # Включаем AOF для сохранения данных
+    command: redis-server --appendonly yes
+    networks:
+      - app-network
+
+  # --- RabbitMQ ---
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: tracker_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: tracker
+      RABBITMQ_DEFAULT_PASS: secret
+    ports:
+      - "5672:5672"    # Порт для AMQP
+      - "15672:15672"  # Порт для Web UI
+    volumes:
+      - ./docker/volumes/rabbitmq:/var/lib/rabbitmq
+    networks:
+      - app-network
+
+  # --- pgAdmin (опционально) ---
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: tracker_pgadmin
+    ports:
+      - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
