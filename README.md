@@ -95,8 +95,8 @@ sudo docker run --rm -u $(id -u):$(id -g) -v $(pwd)/backend:/app -w /app compose
 
 ### Проверить, что Symfony видит БД
 ```
-sudo docker compose exec php php bin/console about
-sudo docker compose exec php php bin/console doctrine:query:sql "SELECT 1"
+sudo docker exec tracker_php php bin/console about
+sudo docker exec tracker_php php bin/console doctrine:query:sql "SELECT 1"
 ```
 
 .env.local:
@@ -117,13 +117,13 @@ JWT_PASSPHRASE=change_me
 
 ### Создать JWT-ключи:
 ```
-sudo docker compose exec php php bin/console lexik:jwt:generate-keypair
+sudo docker exec tracker_php php bin/console lexik:jwt:generate-keypair
 ```
 
 ### Проверить, что Messenger работает
 ```
-sudo docker compose exec php php bin/console debug:config framework messenger
-sudo docker compose exec php php bin/console messenger:stats
+sudo docker exec tracker_php php bin/console debug:config framework messenger
+sudo docker exec tracker_php php bin/console messenger:stats
 ```
 
 
@@ -131,13 +131,13 @@ sudo docker compose exec php php bin/console messenger:stats
 ### Проверки
 ```
 # Symfony видит БД
-sudo docker compose exec php php bin/console doctrine:query:sql "SELECT version()"
+sudo docker  exec tracker_php php bin/console doctrine:query:sql "SELECT version()"
 
 # Messenger знает про транспорт
-sudo docker compose exec php php bin/console debug:config framework messenger
+sudo docker  exec tracker_php php bin/console debug:config framework messenger
 
 # Расширения PHP
-sudo docker compose exec php php -m | grep -E "redis|pgsql"
+sudo docker  exec tracker_php php -m | grep -E "redis|pgsql"
 ```
 
 
@@ -158,7 +158,7 @@ sudo docker volume prune -f
 
 ### Проверь, что расширения на месте
 ```
-sudo docker compose exec php php -m | grep -E "sockets|amqp|redis|bcmath|pgsql"
+sudo docker  exec tracker_php php -m | grep -E "sockets|amqp|redis|bcmath|pgsql"
 ```
 
 
@@ -172,3 +172,11 @@ sockets
 www-data@6ca167960be1:~/html$ ```php bin/console --version```    
 Symfony v7.4.20 (env: dev, debug: true)  
 www-data@6ca167960be1:~/html$   
+
+
+
+```
+sudo docker ps
+sudo docker logs worker | tail -20
+sudo docker logs rabbitmq | tail -10
+```
