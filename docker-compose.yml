@@ -1,3 +1,4 @@
+#affiliate-tracker-symfony/docker-compose.yml
 services:
   # --- Nginx ---
   nginx:
@@ -28,6 +29,7 @@ services:
       DATABASE_URL: "postgresql://tracker:secret@database:5432/tracker?serverVersion=15&charset=utf8"
       REDIS_URL: "redis://redis:6379"
       MESSENGER_TRANSPORT_DSN: "amqp://tracker:secret@rabbitmq:5672/%2f"
+      # MESSENGER_TRANSPORT_DSN: "phpamqplib://tracker:secret@rabbitmq:5672/%2f"
     depends_on:
       - database
       - redis
@@ -49,6 +51,7 @@ services:
       DATABASE_URL: "postgresql://tracker:secret@database:5432/tracker?serverVersion=15&charset=utf8"
       REDIS_URL: "redis://redis:6379"
       MESSENGER_TRANSPORT_DSN: "amqp://tracker:secret@rabbitmq:5672/%2f"
+      # MESSENGER_TRANSPORT_DSN: "phpamqplib://tracker:secret@rabbitmq:5672/%2f"
     depends_on:
       - database
       - redis
@@ -103,7 +106,8 @@ services:
       - "5672:5672"    # Порт для AMQP
       - "15672:15672"  # Порт для Web UI
     volumes:
-      - ./docker/volumes/rabbitmq:/var/lib/rabbitmq
+      # - ./docker/volumes/rabbitmq:/var/lib/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq/mnesia
     networks:
       - app-network
 
@@ -124,3 +128,9 @@ services:
 networks:
   app-network:
     driver: bridge
+
+#Монтируется только mnesia (данные), не весь /var/lib/rabbitmq
+#.erlang.cookie живёт внутри контейнера, создаётся автоматически с нужными правами
+#Данные очередей сохраняются между перезапусками (это главное)
+volumes:
+  rabbitmq_data: 

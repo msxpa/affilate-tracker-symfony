@@ -1,45 +1,66 @@
-FROM php:8.3-fpm-alpine
+#affiliate-tracker-symfony/docker/php/Dockerfile
+FROM php:8.4-fpm
 
-# Системные зависимости
-RUN apk add --no-cache \
+# Системные зависимости для сборки расширений
+RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     unzip \
-    icu-dev \
+    libicu-dev \
     libzip-dev \
-    postgresql-dev \
-    oniguruma-dev \
-    linux-headers \
-    $PHPIZE_DEPS
+    libpq-dev \
+    libonig-dev \
+    librabbitmq-dev \
+    libssl-dev \
+    autoconf \
+    g++ \
+    make \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
-# PHP расширения
+# Встроенные расширения PHP (не требуют PECL)
 RUN docker-php-ext-install \
     intl \
     pdo_pgsql \
     pgsql \
     zip \
-    opcache
+    opcache \
+    bcmath \
+    sockets
 
-# Redis расширение (pecl)
-RUN pecl install redis \
-    && docker-php-ext-enable redis
+# Redis — из исходников GitHub (PECL не работает)
+ARG PHP_REDIS_VERSION=6.2.0
+RUN curl -L -o /tmp/redis.tar.gz "https://github.com/phpredis/phpredis/archive/refs/tags/${PHP_REDIS_VERSION}.tar.gz" \
+    && tar xfz /tmp/redis.tar.gz -C /tmp \
+    && rm -f /tmp/redis.tar.gz \
+    && mkdir -p /usr/src/php/ext/redis \
+    && cp -a /tmp/phpredis-${PHP_REDIS_VERSION}/. /usr/src/php/ext/redis/ \
+    && docker-php-ext-install redis \
+    && rm -rf /tmp/phpredis-${PHP_REDIS_VERSION}
 
-# AMQP расширение (для RabbitMQ)
-RUN apk add --no-cache rabbitmq-c-dev \
-    && pecl install amqp \
-    && docker-php-ext-enable amqp
+# AMQP — из исходников GitHub (v2.2.0)
+ARG PHP_AMQP_VERSION=2.2.0
+RUN curl -L -o /tmp/amqp.tar.gz "https://github.com/php-amqp/php-amqp/archive/refs/tags/v${PHP_AMQP_VERSION}.tar.gz" \
+    && tar xfz /tmp/amqp.tar.gz -C /tmp \
+    && rm -f /tmp/amqp.tar.gz \
+    && mkdir -p /usr/src/php/ext/amqp \
+    && cp -a /tmp/php-amqp-${PHP_AMQP_VERSION}/. /usr/src/php/ext/amqp/ \
+    && cd /usr/src/php/ext/amqp \
+    && phpize \
+    && ./configure --with-librabbitmq \
+    && make -j$(nproc) \
+    && make install \
+    && docker-php-ext-enable amqp \
+    && rm -rf /tmp/php-amqp-${PHP_AMQP_VERSION}
 
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Symfony CLI (опционально, но удобно)
-RUN apk add --no-cache bash \
-    && curl -sS https://get.symfony.com/cli/installer | bash \
+# Symfony CLI
+RUN curl -sS https://get.symfony.com/cli/installer | bash \
     && mv /root/.symfony5/bin/symfony /usr/local/bin/symfony
 
-# Рабочая директория
 WORKDIR /var/www/html
 
-# Права
 RUN chown -R www-data:www-data /var/www/html
 
 USER www-data
