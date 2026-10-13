@@ -1,6 +1,16 @@
+#affiliate-tracker-symfony/backend/config/packages/doctrine.yaml
+
 doctrine:
     dbal:
         url: '%env(resolve:DATABASE_URL)%'
+        types:
+            inet: 
+                class: App\Doctrine\Type\InetType
+            timestamptz:
+                class: App\Doctrine\Type\TimestamptzType
+        #schema_filter: ~^(?!clicks)~   # ← игнорировать все таблицы, начинающиеся с clicks
+        schema_filter: ~^(?!clicks|doctrine_migration_versions|messenger_messages)~
+
 
         # IMPORTANT: You MUST configure your server version,
         # either here or in the DATABASE_URL env var (see .env file)
