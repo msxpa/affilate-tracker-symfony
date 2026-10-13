@@ -31,9 +31,16 @@ services:
       MESSENGER_TRANSPORT_DSN: "amqp://tracker:secret@rabbitmq:5672/%2f"
       # MESSENGER_TRANSPORT_DSN: "phpamqplib://tracker:secret@rabbitmq:5672/%2f"
     depends_on:
-      - database
-      - redis
-      - rabbitmq
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    # depends_on:
+    #   - database
+    #   - redis
+    #   - rabbitmq
     networks:
       - app-network
 
@@ -53,9 +60,16 @@ services:
       MESSENGER_TRANSPORT_DSN: "amqp://tracker:secret@rabbitmq:5672/%2f"
       # MESSENGER_TRANSPORT_DSN: "phpamqplib://tracker:secret@rabbitmq:5672/%2f"
     depends_on:
-      - database
-      - redis
-      - rabbitmq
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    # depends_on:
+    #   - database
+    #   - redis
+    #   - rabbitmq
     networks:
       - app-network
 
@@ -106,10 +120,29 @@ services:
       - "5672:5672"    # Порт для AMQP
       - "15672:15672"  # Порт для Web UI
     volumes:
-      # - ./docker/volumes/rabbitmq:/var/lib/rabbitmq
       - rabbitmq_data:/var/lib/rabbitmq/mnesia
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     networks:
       - app-network
+  # rabbitmq:
+  #   image: rabbitmq:3.13-management-alpine
+  #   container_name: tracker_rabbitmq
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: tracker
+  #     RABBITMQ_DEFAULT_PASS: secret
+  #   ports:
+  #     - "5672:5672"    # Порт для AMQP
+  #     - "15672:15672"  # Порт для Web UI
+  #   volumes:
+  #     # - ./docker/volumes/rabbitmq:/var/lib/rabbitmq
+  #     - rabbitmq_data:/var/lib/rabbitmq/mnesia
+  #   networks:
+  #     - app-network
 
   # --- pgAdmin (опционально) ---
   pgadmin:

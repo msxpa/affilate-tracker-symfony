@@ -40,6 +40,7 @@ sudo docker compose up -d tracker_php
 sudo docker exec -u $(id -u):$(id -g) tracker_php composer update
 ```
 
+<!-- 
 ### Доустановить специфичные для трекера пакеты:
 ```
 # Messenger + AMQP транспорт
@@ -86,12 +87,12 @@ sudo docker run --rm \
   -w /app \
   composer:latest \
   require php-amqplib/php-amqplib checkthiscloud/phpamqplib-messenger
-```
+``` -->
 
-### ⚠️ Про AMQP: Если хочешь избежать проблем с C-расширением, установи php-amqplib:
+<!-- ### ⚠️ Про AMQP: Если хочешь избежать проблем с C-расширением, установи php-amqplib:
 ```
 sudo docker run --rm -u $(id -u):$(id -g) -v $(pwd)/backend:/app -w /app composer:latest require php-amqplib/php-amqplib
-```
+``` -->
 
 ### Проверить, что Symfony видит БД
 ```
@@ -99,7 +100,7 @@ sudo docker exec tracker_php php bin/console about
 sudo docker exec tracker_php php bin/console doctrine:query:sql "SELECT 1"
 ```
 
-.env.local:
+### .env.local:
 ```
 # backend/.env.local
 APP_ENV=dev
@@ -131,13 +132,13 @@ sudo docker exec tracker_php php bin/console messenger:stats
 ### Проверки
 ```
 # Symfony видит БД
-sudo docker  exec tracker_php php bin/console doctrine:query:sql "SELECT version()"
+sudo docker exec tracker_php php bin/console doctrine:query:sql "SELECT version()"
 
 # Messenger знает про транспорт
-sudo docker  exec tracker_php php bin/console debug:config framework messenger
+sudo docker exec tracker_php php bin/console debug:config framework messenger
 
 # Расширения PHP
-sudo docker  exec tracker_php php -m | grep -E "redis|pgsql"
+sudo docker exec tracker_php php -m | grep -E "redis|pgsql"
 ```
 
 
@@ -150,6 +151,7 @@ sudo docker volume ls | grep rabbitmq
 sudo docker volume rm <имя>
 sudo docker compose up -d rabbitmq
 ```
+
 Или проще — через UI Docker Desktop или командой:
 ```
 sudo docker volume prune -f
@@ -158,7 +160,7 @@ sudo docker volume prune -f
 
 ### Проверь, что расширения на месте
 ```
-sudo docker  exec tracker_php php -m | grep -E "sockets|amqp|redis|bcmath|pgsql"
+sudo docker exec tracker_php php -m | grep -E "sockets|amqp|redis|bcmath|pgsql"
 ```
 
 
@@ -177,6 +179,87 @@ www-data@6ca167960be1:~/html$
 
 ```
 sudo docker ps
-sudo docker logs worker | tail -20
-sudo docker logs rabbitmq | tail -10
+sudo docker compose logs worker | tail -20
+sudo docker compose logs rabbitmq | tail -20
+```
+
+### Чек коннекта с Rabbit MQ через php
+```
+sudo docker compose exec php php -r '
+try {
+    $c = new AMQPConnection([
+        "host" => "rabbitmq",
+        "port" => 5672,
+        "login" => "tracker",
+        "password" => "secret",
+        "vhost" => "/",
+    ]);
+    $c->connect();
+    echo "Connected OK\n";
+    $c->disconnect();
+} catch (\Throwable $e) {
+    echo "Error: " . $e->getMessage() . "\n";
+}
+'
+```
+
+
+
+```
+sudo docker compose ps
+sudo docker compose exec php php bin/console --version
+sudo docker compose exec php php bin/console doctrine:query:sql "SELECT version()"
+ls backend/config/jwt/
+
+sudo docker compose exec -u $(id -u):$(id -g) php php bin/console lexik:jwt:generate-keypair
+ls -la backend/config/jwt/
+```
+
+
+### Вариант 1: psql напрямую
+```
+sudo docker compose exec database psql -U tracker -d tracker -c "SELECT version();"
+```
+
+### Вариант 2: dbal:run-sql
+```
+sudo docker compose exec php php bin/console dbal:run-sql "SELECT version()"
+```
+
+### Вариант 3: посмотреть все доступные команды doctrine
+```
+sudo docker compose exec php php bin/console list doctrine
+sudo docker compose exec php php bin/console list dbal
+```
+
+
+
+
+
+### 1. Создать папку (если её нет)
+```
+mkdir -p backend/config/jwt
+```
+
+### 2. Сгенерировать ключи от своего UID (чтобы файлы принадлежали тебе)
+```
+sudo docker compose exec -u $(id -u):$(id -g) php php bin/console lexik:jwt:generate-keypair
+```
+
+### 3. Проверить
+```
+ls -la backend/config/jwt/
+```
+
+
+### Проверь, что Doctrine видит сущности:
+```
+sudo docker compose exec php php bin/console doctrine:mapping:info
+```
+
+Должен вывести список: User, Affiliate, Offer, Click, Conversion.
+
+### Сгенерируй миграцию:
+```
+sudo docker compose exec php php bin/console make:migration
 ```

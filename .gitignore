@@ -1,1 +1,3 @@
 docker/volumes/*
+/backend/config/jwt/*.pem
+/backend/.env.local
