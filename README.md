@@ -281,15 +281,114 @@ sudo docker compose exec php php bin/console doctrine:schema:validate
 ```
 
 ### Список всех app: команд
+```
 sudo docker compose exec php php bin/console list app
+```
 
 ### Или найти конкретную
+```
 sudo docker compose exec php php bin/console list | grep validate
+```
 
-###
+### Validate schema Custom
 ```
 sudo docker compose exec php php bin/console app:db:validate-schema
 ```
+
+### Проверь роуты
+```
+sudo docker compose exec php php bin/console debug:router | grep -iE "api|login"
+```
+
+api_auth_register   POST    /api/auth/register
+api_auth_me         GET     /api/auth/me
+api_login_check     POST    /api/auth/login
+
+
+### Тест регистрации
+```
+curl -X POST http://localhost/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"web@test.com","password":"password123"}'
+```
+
+Ожидаемо 201 Created:
+```
+{
+  "user": {"id":1,"email":"web@test.com","roles":["ROLE_AFFILIATE","ROLE_USER"]},
+  "affiliate": {"id":1,"webId":"web_...","status":"pending"}
+}
+```
+
+### Тест логина
+```
+curl -X POST http://localhost/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"web@test.com","password":"password123"}'
+```
+
+Ожидаемо 200 OK:
+```
+{"token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."}
+```
+
+### Тест /api/auth/me с токеном
+```
+TOKEN=$(curl -s -X POST http://localhost/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"web@test.com","password":"password123"}' | jq -r .token)
+
+curl http://localhost/api/auth/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+Ожидаемо:
+```
+{
+  "user": {"id":1,"email":"web@test.com","roles":["ROLE_AFFILIATE","ROLE_USER"]},
+  "affiliate": {"id":1,"webId":"web_...","status":"pending"}
+}
+```
+
+
+
+
+
+┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
+└─$ grep -n "function login" backend/src/Controller/Api/AuthController.php
+47:    public function login(): JsonResponse
+                                                                                                                                           
+┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
+└─$ sudo docker compose exec php php bin/console cache:clear
+
+ // Clearing the cache for the dev environment with debug true                                                          
+
+                                                                                                                        
+ [OK] Cache for the "dev" environment (debug=true) was successfully cleared.                                            
+                                                                                                                        
+
+                                                                                                                                           
+┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
+└─$ sudo docker compose exec php php bin/console debug:router | grep -iE "api|login"
+  api_auth_login             POST     /api/auth/login                    
+  api_auth_register          POST     /api/auth/register                 
+  api_auth_me                GET      /api/auth/me                       
+                                                                                                                                           
+┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
+└─$ curl -X POST http://localhost/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"web@test.com","password":"password123"}'
+{"user":{"id":1,"email":"web@test.com","roles":["ROLE_AFFILIATE","ROLE_USER"]},"affiliate":{"id":1,"webId":"web_1ZDVYMA6EP8CTV6MEVHE8AR7FC","status":"pending"}}                                                                                                                                           
+┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
+└─$ 
+
+
+
+
+
+
+
+
 
 
 
