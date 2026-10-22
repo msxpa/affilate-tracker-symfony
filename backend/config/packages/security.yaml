@@ -60,6 +60,7 @@ security:
         - { path: ^/api/auth/(login|register)$, roles: PUBLIC_ACCESS }
         - { path: ^/api/doc, roles: PUBLIC_ACCESS }
         - { path: ^/api$, roles: PUBLIC_ACCESS }
+        - { path: ^/api/admin, roles: ROLE_ADMIN }
 
         # Админские
         - { path: ^/api/admin, roles: ROLE_ADMIN }

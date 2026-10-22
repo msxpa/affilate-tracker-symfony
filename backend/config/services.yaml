@@ -1,3 +1,4 @@
+#affiliate-tracker-symfony/backend/config/services.yaml
 # yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
 
 # This file is the entry point to configure your own services.
@@ -18,6 +19,10 @@ services:
     # this creates a service per class whose id is the fully-qualified class name
     App\:
         resource: '../src/'
+    
+    App\Service\LinkGenerator:
+        arguments:
+            $trackBaseUrl: '%env(TRACK_BASE_URL)%'
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
