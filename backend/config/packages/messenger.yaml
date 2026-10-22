@@ -1,3 +1,4 @@
+#affiliate-tracker-symfony/backend/config/packages/messenger.yaml
 framework:
     messenger:
         failure_transport: failed
@@ -6,10 +7,22 @@ framework:
             # https://symfony.com/doc/current/messenger.html#transport-configuration
             async:
                 dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    exchange:
+                        name: messages
+                    queues:
+                        async:
+                            binding_keys: [async]
                 retry_strategy:
                     max_retries: 3
                     multiplier: 2
             failed: 'doctrine://default?queue_name=failed'
+            # async:
+            #     dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+            #     retry_strategy:
+            #         max_retries: 3
+            #         multiplier: 2
+            # failed: 'doctrine://default?queue_name=failed'
             # sync: 'sync://'
 
         default_bus: messenger.bus.default
@@ -24,3 +37,4 @@ framework:
 
             # Route your messages to the transports
             # 'App\Message\YourMessage': async
+            App\Message\ClickMessage: async #для rabbitmq (+debug)

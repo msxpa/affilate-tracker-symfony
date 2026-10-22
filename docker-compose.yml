@@ -121,6 +121,7 @@ services:
       - "15672:15672"  # Порт для Web UI
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq/mnesia
+      - ./docker/volumes/rabbitmq-tracing:/var/tmp/rabbitmq-tracing   # ← rabbitmq debug
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
