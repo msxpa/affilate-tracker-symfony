@@ -26,9 +26,17 @@ final class ClickBatchHandler
         $this->handle($message, $ack);
     }
 
-    private function shouldFlush(): bool
+    // private function shouldFlush(): bool
+    // {
+    //     // return \count($this->batch) >= 500;
+        
+    //     //use Symfony\Component\Messenger\Handler\BatchHandlerTrait;
+    //     return $this->getBatchSize() <= \count($this->jobs);  // ← 500 <= count($jobs)
+    // }
+
+    private function getBatchSize(): int
     {
-        return \count($this->batch) >= 500;
+        return 500;
     }
 
     /**
