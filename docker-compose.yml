@@ -52,6 +52,7 @@ services:
     container_name: tracker_worker
     # Команда для запуска обработки очередей
     command: php bin/console messenger:consume async --time-limit=3600 --memory-limit=256M -vv
+    restart: unless-stopped
     volumes:
       - ./backend:/var/www/html
     environment:

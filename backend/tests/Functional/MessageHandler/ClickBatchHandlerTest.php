@@ -52,40 +52,6 @@ final class ClickBatchHandlerTest extends KernelTestCase
         return (int) $this->db->lastInsertId();
     }
 
-    // public function testProcessInsertsClick(): void
-    // {
-    //     $affiliateId = $this->createAffiliate('web_test123');
-
-    //     $clickId = Uuid::v4()->toRfc4122();
-    //     $message = new ClickMessage(
-    //         clickId: $clickId,
-    //         offerId: 1,
-    //         webId: 'web_test123',
-    //         ip: '1.2.3.4',
-    //         userAgent: 'Mozilla/5.0',
-    //         referer: 'https://google.com',
-    //         params: ['utm_source' => 'test'],
-    //         createdAt: new \DateTimeImmutable('2026-10-22 12:00:00'),
-    //     );
-
-    //     // Вызываем handler (через __invoke)
-    //     // $ack = new Acknowledger(function () {}); //error bad
-    //     $ack = new Acknowledger(ClickBatchHandler::class, function () {}); //test from __construct
-    //     // $ack = $this->createMock(Acknowledger::class); //best TEST
-    //     $this->handler->__invoke($message, $ack);
-
-    //     // Проверяем, что клик в БД
-    //     $click = $this->db->fetchAssociative(
-    //         'SELECT * FROM clicks WHERE click_id = ?',
-    //         [$clickId]
-    //     );
-
-    //     $this->assertNotFalse($click);
-    //     $this->assertSame($clickId, $click['click_id']);
-    //     $this->assertSame(1, (int) $click['offer_id']);
-    //     $this->assertSame($affiliateId, (int) $click['affiliate_id']);
-    //     $this->assertSame('1.2.3.4', $click['ip']);
-    // }
 
     public function testProcessInsertsClick(): void
     {
@@ -122,34 +88,6 @@ final class ClickBatchHandlerTest extends KernelTestCase
         $this->assertSame('1.2.3.4', $click['ip']);
     }
 
-    // public function testUnknownWebIdSkipped(): void
-    // {
-    //     $clickId = Uuid::v4()->toRfc4122();
-    //     $message = new ClickMessage(
-    //         clickId: $clickId,
-    //         offerId: 1,
-    //         webId: 'unknown_web',
-    //         ip: '1.2.3.4',
-    //         userAgent: null,
-    //         referer: null,
-    //         params: [],
-    //         createdAt: new \DateTimeImmutable(),
-    //     );
-
-    //     // $ack = new Acknowledger(function () {});
-    //     $ack = new Acknowledger(ClickBatchHandler::class, function () {}); //test from __construct
-    //     // $ack = $this->createMock(Acknowledger::class); //best TEST
-        
-    //     $this->handler->__invoke($message, $ack);
-
-    //     // Клик НЕ должен быть в БД (web_id не найден)
-    //     $click = $this->db->fetchAssociative(
-    //         'SELECT * FROM clicks WHERE click_id = ?',
-    //         [$clickId]
-    //     );
-
-    //     $this->assertFalse($click);
-    // }
 
     public function testUnknownWebIdSkipped(): void
     {
@@ -178,51 +116,6 @@ final class ClickBatchHandlerTest extends KernelTestCase
 
         $this->assertFalse($click);
     }
-
-    // public function testDuplicateClickIgnored(): void
-    // {
-    //     $affiliateId = $this->createAffiliate('web_test123');
-    //     $clickId = Uuid::v4()->toRfc4122();
-    //     $createdAt = new \DateTimeImmutable('2026-10-22 12:00:00');
-
-    //     // Первый клик
-    //     $message1 = new ClickMessage(
-    //         clickId: $clickId,
-    //         offerId: 1,
-    //         webId: 'web_test123',
-    //         ip: '1.2.3.4',
-    //         userAgent: null,
-    //         referer: null,
-    //         params: [],
-    //         createdAt: $createdAt,
-    //     );
-
-    //     $ack1 = new Acknowledger(ClickBatchHandler::class, function () {});
-    //     $this->handler->__invoke($message1, $ack1);
-
-    //     // Второй клик с тем же clickId
-    //     $message2 = new ClickMessage(
-    //         clickId: $clickId,
-    //         offerId: 1,
-    //         webId: 'web_test123',
-    //         ip: '5.6.7.8',
-    //         userAgent: null,
-    //         referer: null,
-    //         params: [],
-    //         createdAt: $createdAt,
-    //     );
-
-    //     $ack2 = new Acknowledger(ClickBatchHandler::class, function () {});
-    //     $this->handler->__invoke($message2, $ack2);
-
-    //     // В БД должен быть ТОЛЬКО один клик (ON CONFLICT DO NOTHING)
-    //     $count = $this->db->fetchOne(
-    //         'SELECT COUNT(*) FROM clicks WHERE click_id = ?',
-    //         [$clickId]
-    //     );
-
-    //     $this->assertSame(1, (int) $count);
-    // }
 
     public function testDuplicateClickIgnored(): void
     {

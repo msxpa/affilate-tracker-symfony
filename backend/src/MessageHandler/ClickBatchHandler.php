@@ -42,6 +42,8 @@ final class ClickBatchHandler
     /**
      * @param array<int, array{0: ClickMessage, 1: Acknowledger}> $batch
      */
+  
+
     private function process(array $batch): void
     {
         // debug_logx($batch);
@@ -69,7 +71,7 @@ final class ClickBatchHandler
 
         foreach ($batch as $i => [$msg, $ack]) {
             $acks[] = $ack;
-            debug_logx(['$ack',$ack]);
+            // debug_logx(['$ack',$ack]);
 
             $affiliateId = $affiliateIds[$msg->webId] ?? null;
 
@@ -79,7 +81,7 @@ final class ClickBatchHandler
             }
 
             $values[] = "(:click_id_$i, :offer_id_$i, :affiliate_id_$i, :ip_$i, :ua_$i, :ref_$i, :params_$i, :created_$i)";
-            debug_logx(['$values',$values]);
+            // debug_logx(['$values',$values]);
 
             $params["click_id_$i"] = $msg->clickId;
             $params["offer_id_$i"] = $msg->offerId;
@@ -90,7 +92,7 @@ final class ClickBatchHandler
             $params["params_$i"] = json_encode($msg->params, JSON_THROW_ON_ERROR);
             $params["created_$i"] = $msg->createdAt->format('Y-m-d H:i:s.uP');
 
-            debug_logx(['$params',$params]);
+            // debug_logx(['$params',$params]);
         }
 
         // 4. Если нечего вставлять — просто ack все

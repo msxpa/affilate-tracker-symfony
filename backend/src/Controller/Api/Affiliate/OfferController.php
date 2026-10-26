@@ -76,9 +76,9 @@ final class OfferController extends AbstractController
         if ($affiliate === null) {
             throw new ApiException('Affiliate not found', Response::HTTP_FORBIDDEN);
         }
-
+    
         // Добавляем оффер вебу (M:N)
-        $affiliate->addOffer($offer);
+        $affiliate->takeOffer($offer);
         $this->em->flush();
 
         return new JsonResponse([

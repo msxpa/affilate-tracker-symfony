@@ -59,7 +59,7 @@ final class TrackControllerTest extends WebTestCase
         $this->client->request('GET', '/click', [
             'offer' => $offer->getId(),
             'web_id' => 'web_test123',
-            'clickid' => $clickId,
+            'click_id' => $clickId,
         ]);
 
         $this->assertResponseStatusCodeSame(302);
@@ -111,28 +111,6 @@ final class TrackControllerTest extends WebTestCase
         $this->assertResponseStatusCodeSame(404);
     }
 
-    // public function testInvalidClickIdGeneratesUuid(): void
-    // {
-    //     $offer = $this->createOffer(true);
-
-    //     $this->client->request('GET', '/click', [
-    //         'offer' => $offer->getId(),
-    //         'web_id' => 'web_test123',
-    //         'clickid' => 'not-a-uuid',
-    //     ]);
-
-    //     $this->assertResponseStatusCodeSame(302);
-
-    //     $location = $this->client->getResponse()->headers->get('Location');
-    //     $this->assertNotNull($location);
-
-    //     // Извлекаем click_id из Location
-    //     parse_str(parse_url($location, PHP_URL_QUERY), $query);
-    //     $clickId = $query['click_id'] ?? '';
-
-    //     $this->assertTrue(Uuid::isValid($clickId), 'Click ID должен быть UUID');
-    //     $this->assertNotSame('not-a-uuid', $clickId);
-    // }
 
     public function testInvalidClickIdGeneratesUuid(): void
     {
@@ -141,7 +119,7 @@ final class TrackControllerTest extends WebTestCase
         $this->client->request('GET', '/click', [
             'offer' => $offer->getId(),
             'web_id' => 'web_test123',
-            'clickid' => 'not-a-uuid',
+            'click_id' => 'not-a-uuid',
         ]);
 
         $this->assertResponseStatusCodeSame(302);
@@ -156,23 +134,6 @@ final class TrackControllerTest extends WebTestCase
         $this->assertNotSame('not-a-uuid', $matches[1]);
     }
 
-    // public function testClickWithoutClickIdGeneratesUuid(): void
-    // {
-    //     $offer = $this->createOffer(true);
-
-    //     $this->client->request('GET', '/click', [
-    //         'offer' => $offer->getId(),
-    //         'web_id' => 'web_test123',
-    //     ]);
-
-    //     $this->assertResponseStatusCodeSame(302);
-
-    //     $location = $this->client->getResponse()->headers->get('Location');
-    //     parse_str(parse_url($location, PHP_URL_QUERY), $query);
-    //     $clickId = $query['click_id'] ?? '';
-
-    //     $this->assertTrue(Uuid::isValid($clickId));
-    // }
 
     public function testClickWithoutClickIdGeneratesUuid(): void
     {

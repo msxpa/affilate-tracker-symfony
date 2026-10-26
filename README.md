@@ -26,7 +26,7 @@ sudo docker run --rm \
 ```
 
 ### Как проверить имя папки  
-#### Скачай архив и посмотри:  
+### Скачай архив и посмотри:  
 ```
 curl -L -o /tmp/amqp.tar.gz "https://github.com/php-amqp/php-amqp/archive/refs/tags/v2.2.0.tar.gz"
 tar tzf /tmp/amqp.tar.gz | head -3
@@ -39,6 +39,222 @@ sudo docker compose up -d tracker_php
 # Потом запускай composer внутри него
 sudo docker exec -u $(id -u):$(id -g) tracker_php composer update
 ```
+
+
+[26 10 2026 21:58] Affilate Symfony Project: ############ CONSOLE WORK (CURL, DB, DOCKER) ############################3
+
+---АДМИН---
+
+### CRATE ADMIN CUSTOM METHOD
+```
+sudo docker compose exec php php bin/console app:user:create-admin "msxpahub@gmail.com" "12351235admin"
+```
+
+
+### Login ADMIN
+
+```
+ADMIN_TOKEN=$(curl -s -X POST http://localhost/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"msxpahub@gmail.com","password":"12351235admin"}' | jq -r .token)
+
+echo "ADMIN_TOKEN length: ${#ADMIN_TOKEN}"
+```
+
+
+### Получить один оффер (АДМИН)
+```
+curl http://localhost/api/admin/offers/1 \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq
+```
+
+
+### Список офферов (АДМИН)
+```
+curl http://localhost/api/admin/offers \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq
+```
+
+
+
+### Создать оффер (АДМИН)
+```
+curl -X POST http://localhost/api/admin/offers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{
+    "name": "Test Offer",
+    "slug": "test-offer",
+    "destinationUrl": "https://example.com/offer",
+    "payout": "10.00",
+    "revenue": "15.00",
+    "allowedCountries": ["RU", "KZ"]
+  }' | jq
+```
+
+
+
+### Взять ОФФЕР
+```
+curl -X POST http://localhost/api/affiliate/offers/{id}/take -H "Authorization: Bearer $ADMIN_TOKEN"
+```
+
+  
+  
+### Активировать веба (админ)
+### Веб создаётся со status: pending. Чтобы он мог брать офферы — нужен status: active.
+### Обнови статус через psql (пока нет API-метода для этого):
+```
+sudo docker compose exec database psql -U tracker -d tracker -c "
+UPDATE affiliates SET status = 'active' WHERE web_id = '$WEB_ID';
+"
+```
+
+
+### POSTBACK
+```
+curl -i "http://localhost/postback?web_id=$ADMIN_TOKEN&click_id=$CLICK_ID&payout=10.00&status=approved&secret=$SECRET"
+```
+
+
+### Проверь токен (АДМИН)
+```
+
+curl http://localhost/api/auth/me \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq
+```
+
+
+
+### Обновить оффер (АДМИН)
+```
+curl -X PATCH http://localhost/api/admin/offers/1 \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -d '{"payout": "20.00", "active": false}' | jq
+```
+
+
+---ВЕБ---
+### Создать веба (регистрация)
+```
+curl -s -X POST http://localhost/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"web@test.com","password":"password123"}' | jq
+```
+
+
+
+### Логин веба — получить токен
+```
+WEB_TOKEN=$(curl -s -X POST http://localhost/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"web@test.com","password":"password123"}' | jq -r .token)
+```
+
+
+### MAKE WEB ACTIVE
+```
+sudo docker compose exec database psql -U tracker -d tracker -c "
+UPDATE affiliates SET status = 'active' WHERE web_id = '$WEB_ID';
+"
+```
+
+
+### Проверка токена:
+```
+curl -s http://localhost/api/auth/me \
+  -H "Authorization: Bearer $WEB_TOKEN" | jq
+
+echo "WEB_TOKEN length: ${#WEB_TOKEN}"
+```
+
+
+
+### Список Офферов
+```
+curl http://localhost/api/affiliate/offers \
+  -H "Authorization: Bearer $WEB_TOKEN" | jq
+```
+
+
+
+### Создать оффер (админ)
+```
+curl -s -X POST http://localhost/api/admin/offers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $WEB_TOKEN" \
+  -d '{
+    "name": "Test Offer",
+    "slug": "test-offer",
+    "destinationUrl": "https://example.com/offer",
+    "payout": "10.00",
+    "revenue": "15.00",
+    "allowedCountries": ["RU", "KZ"]
+  }' | jq
+```
+
+
+
+### Взять ОФФЕР
+```
+curl -X POST http://localhost/api/affiliate/offers/{id}/take -H "Authorization: Bearer $WEB_TOKEN"
+```
+
+
+
+### Проверка прав — веб НЕ может создавать офферы
+```
+WEB_TOKEN=$(curl -s -X POST http://localhost/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"web@test.com","password":"password123"}' | jq -r .token)
+
+echo "WEB_TOKEN=$WEB_TOKEN"
+
+curl -X POST http://localhost/api/admin/offers \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $WEB_TOKEN" \
+  -d '{"name":"Hack","slug":"hack","destinationUrl":"https://hack.com","payout":"0","revenue":"0"}' | jq
+[26 10 2026 21:58] Affilate Symfony Project: ### CLICK
+CLICK_ID=$(cat /proc/sys/kernel/random/uuid)
+echo "CLICK_ID=$CLICK_ID"
+curl -i "http://localhost/click?offer=1&web_id=$WEB_ID&clickid=$CLICK_ID"
+sleep 3;
+```
+
+
+
+### POSTBACK
+```
+curl -i "http://localhost/postback?web_id=$WEB_ID&click_id=$CLICK_ID&payout=10.00&status=approved&secret=$SECRET"
+```
+
+
+
+### AFFILIATE by WEB_ID
+```
+SELECT * FROM affiliates WHERE web_id = '$WEB_ID';
+```
+
+
+### AFFILIATE FIND CONVERSION
+```
+docker exec -it tacker_database -c "
+SELECT * FROM conversions c JOIN affiliates a ON a.id = c.affiliate_id WHERE a.web_id = '$WEB_ID';
+```
+
+"
+
+### UPDATE PRICE
+```
+docker exec -it tacker_database -c "
+update affiliates SET balance ='10.00' where web_id='$WEB_ID';
+"
+```
+
+
+
+
 
 <!-- 
 ### Доустановить специфичные для трекера пакеты:
@@ -350,205 +566,7 @@ curl http://localhost/api/auth/me \
 }
 ```
 
-
-
-
-
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ grep -n "function login" backend/src/Controller/Api/AuthController.php
-47:    public function login(): JsonResponse
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console cache:clear
-
- // Clearing the cache for the dev environment with debug true                                                          
-
-                                                                                                                        
- [OK] Cache for the "dev" environment (debug=true) was successfully cleared.                                            
-                                                                                                                        
-
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console debug:router | grep -iE "api|login"
-  api_auth_login             POST     /api/auth/login                    
-  api_auth_register          POST     /api/auth/register                 
-  api_auth_me                GET      /api/auth/me                       
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ curl -X POST http://localhost/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"email":"web@test.com","password":"password123"}'
-{"user":{"id":1,"email":"web@test.com","roles":["ROLE_AFFILIATE","ROLE_USER"]},"affiliate":{"id":1,"webId":"web_1ZDVYMA6EP8CTV6MEVHE8AR7FC","status":"pending"}}                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console cache:clear
-
- // Clearing the cache for the dev environment with debug true                                                          
-
-                                                                                                                        
- [OK] Cache for the "dev" environment (debug=true) was successfully cleared.                                            
-                                                                                                                        
-
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console app:db:validate-schema
-Schema is not in sync (excluding clicks):
-  ALTER TABLE conversions ALTER created_at TYPE TIMESTAMPTZ
-  ALTER TABLE conversions ALTER created_at SET DEFAULT 'now()'
-  ALTER TABLE affiliates ALTER created_at TYPE TIMESTAMPTZ
-  ALTER TABLE affiliates ALTER created_at SET DEFAULT 'now()'
-  ALTER TABLE affiliates ALTER updated_at TYPE TIMESTAMPTZ
-  ALTER TABLE offers ALTER created_at TYPE TIMESTAMPTZ
-  ALTER TABLE offers ALTER created_at SET DEFAULT 'now()'
-  ALTER TABLE offers ALTER updated_at TYPE TIMESTAMPTZ
-  ALTER TABLE users ALTER created_at TYPE TIMESTAMPTZ
-  ALTER TABLE users ALTER created_at SET DEFAULT 'now()'
-  ALTER TABLE users ALTER updated_at TYPE TIMESTAMPTZ
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ 
-
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console doctrine:schema:validate
-
-Mapping
--------
-
-                                                                                                                        
- [OK] The mapping files are correct.                                                                                    
-                                                                                                                        
-
-Database
---------
-
-                                                                                                                        
- [ERROR] The database schema is not in sync with the current mapping file.                                              
-                                                                                                                        
-
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console doctrine:schema:update --dump-sql
-CREATE SEQUENCE clicks_id_seq INCREMENT BY 1 MINVALUE 1 START 1;
-CREATE TABLE conversions (id INT GENERATED BY DEFAULT AS IDENTITY NOT NULL, click_id VARCHAR(36) NOT NULL, payout NUMERIC(10, 2) NOT NULL, status VARCHAR(20) NOT NULL, meta JSON NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, offer_id INT NOT NULL, affiliate_id INT NOT NULL, PRIMARY KEY (id));
-CREATE INDEX idx_conversions_click_id ON conversions (click_id);
-CREATE INDEX idx_conversions_created_at ON conversions (created_at);
-CREATE INDEX IDX_6A02DBA553C674EE ON conversions (offer_id);
-CREATE INDEX IDX_6A02DBA59F12C49A ON conversions (affiliate_id);
-CREATE TABLE affiliates (id INT GENERATED BY DEFAULT AS IDENTITY NOT NULL, web_id VARCHAR(64) NOT NULL, status VARCHAR(20) NOT NULL, postback_url VARCHAR(512) DEFAULT NULL, secret VARCHAR(64) NOT NULL, balance NUMERIC(12, 2) NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, user_id INT NOT NULL, PRIMARY KEY (id));
-CREATE UNIQUE INDEX UNIQ_108C6A8FA76ED395 ON affiliates (user_id);
-CREATE UNIQUE INDEX uniq_affiliates_web_id ON affiliates (web_id);
-CREATE TABLE affiliate_offers (affiliate_id INT NOT NULL, offer_id INT NOT NULL, PRIMARY KEY (affiliate_id, offer_id));
-CREATE INDEX IDX_559634DD9F12C49A ON affiliate_offers (affiliate_id);
-CREATE INDEX IDX_559634DD53C674EE ON affiliate_offers (offer_id);
-CREATE TABLE offers (id INT GENERATED BY DEFAULT AS IDENTITY NOT NULL, name VARCHAR(120) NOT NULL, slug VARCHAR(120) NOT NULL, destination_url VARCHAR(1024) NOT NULL, payout NUMERIC(10, 2) NOT NULL, revenue NUMERIC(10, 2) NOT NULL, active BOOLEAN NOT NULL, allowed_countries JSON NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, PRIMARY KEY (id));
-CREATE UNIQUE INDEX uniq_offers_slug ON offers (slug);
-CREATE TABLE clicks (id BIGINT NOT NULL, click_id UUID NOT NULL, ip INET DEFAULT NULL, country CHAR(2) DEFAULT NULL, user_agent VARCHAR(512) DEFAULT NULL, referer VARCHAR(512) DEFAULT NULL, params JSONB NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT 'now()' NOT NULL, offer_id INT NOT NULL, affiliate_id INT NOT NULL, PRIMARY KEY (id));
-CREATE INDEX IDX_20DA190153C674EE ON clicks (offer_id);
-CREATE INDEX IDX_20DA19019F12C49A ON clicks (affiliate_id);
-CREATE TABLE users (id INT GENERATED BY DEFAULT AS IDENTITY NOT NULL, email VARCHAR(180) NOT NULL, roles JSON NOT NULL, password VARCHAR(255) NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, updated_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, PRIMARY KEY (id));
-CREATE UNIQUE INDEX uniq_users_email ON users (email);
-CREATE TABLE messenger_messages (id BIGINT GENERATED BY DEFAULT AS IDENTITY NOT NULL, body TEXT NOT NULL, headers TEXT NOT NULL, queue_name VARCHAR(190) NOT NULL, created_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, available_at TIMESTAMP(0) WITHOUT TIME ZONE NOT NULL, delivered_at TIMESTAMP(0) WITHOUT TIME ZONE DEFAULT NULL, PRIMARY KEY (id));
-CREATE INDEX IDX_75EA56E0FB7336F0E3BD61CE16BA31DBBF396750 ON messenger_messages (queue_name, available_at, delivered_at, id);
-ALTER TABLE conversions ADD CONSTRAINT FK_6A02DBA553C674EE FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE RESTRICT NOT DEFERRABLE;
-ALTER TABLE conversions ADD CONSTRAINT FK_6A02DBA59F12C49A FOREIGN KEY (affiliate_id) REFERENCES affiliates (id) ON DELETE RESTRICT NOT DEFERRABLE;
-ALTER TABLE affiliates ADD CONSTRAINT FK_108C6A8FA76ED395 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE NOT DEFERRABLE;
-ALTER TABLE affiliate_offers ADD CONSTRAINT FK_559634DD9F12C49A FOREIGN KEY (affiliate_id) REFERENCES affiliates (id) ON DELETE CASCADE;
-ALTER TABLE affiliate_offers ADD CONSTRAINT FK_559634DD53C674EE FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE;
-ALTER TABLE clicks ADD CONSTRAINT FK_20DA190153C674EE FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE RESTRICT NOT DEFERRABLE;
-ALTER TABLE clicks ADD CONSTRAINT FK_20DA19019F12C49A FOREIGN KEY (affiliate_id) REFERENCES affiliates (id) ON DELETE RESTRICT NOT DEFERRABLE;
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ 
-
-
-
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console doctrine:migrations:status
-+----------------------------------------------------------------------------------------------------------------------+
-| Configuration                                                                                                        |
-+----------------------+----------------------+------------------------------------------------------------------------+
-| Storage              | Type                 | Doctrine\Migrations\Metadata\Storage\TableMetadataStorageConfiguration |
-|                      | Table Name           | doctrine_migration_versions                                            |
-|                      | Column Name          | version                                                                |
-|----------------------------------------------------------------------------------------------------------------------|
-| Database             | Driver               | Symfony\Bridge\Doctrine\Middleware\IdleConnection\Driver               |
-|                      | Name                 | tracker                                                                |
-|----------------------------------------------------------------------------------------------------------------------|
-| Versions             | Previous             | 0                                                                      |
-|                      | Current              | 0                                                                      |
-|                      | Next                 | DoctrineMigrations\Version20261013142727                               |
-|                      | Latest               | DoctrineMigrations\Version20261013142727                               |
-|----------------------------------------------------------------------------------------------------------------------|
-| Migrations           | Executed             | 0                                                                      |
-|                      | Executed Unavailable | 0                                                                      |
-|                      | Available            | 1                                                                      |
-|                      | New                  | 1                                                                      |
-|----------------------------------------------------------------------------------------------------------------------|
-| Migration Namespaces | DoctrineMigrations   | /var/www/html/migrations                                               |
-+----------------------+----------------------+------------------------------------------------------------------------+
-                                                                                                                                           
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ 
-
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ sudo docker compose exec php php bin/console doctrine:migrations:migrate
-
- WARNING! You are about to execute a migration in database "tracker" that could result in schema changes and data loss. Are you sure you wish to continue? (yes/no) [yes]:
- > yes
-
-[notice] Migrating up to DoctrineMigrations\Version20261013142727
-[notice] finished in 245.7ms, used 24M memory, 1 migrations executed, 33 sql queries
-                                                                                                                        
- [OK] Successfully migrated to version: DoctrineMigrations\Version20261013142727                                        
-                                                                                                                                                                                                                                                            
-┌──(comp㉿comp)-[~/Desktop/affilate-tracker/affiliate-tracker-symfony]
-└─$ 
-
-
- Важно: schema:validate всегда будет ERROR для clicks
-Запомни на будущее:
-
-text
-[ERROR] The database schema is not in sync with the current mapping file.
-Это не проблема проекта, это ограничение Doctrine. Doctrine не знает про PARTITION BY RANGE, поэтому видит расхождение:
-
-Entity: PK = (id), TIMESTAMP WITHOUT TIME ZONE
-
-БД: PK = (id, created_at), TIMESTAMPTZ, PARTITION BY RANGE
-
-Что делать: использовать --skip-sync, чтобы проверять только mapping:
-
-bash
-sudo docker compose exec php php bin/console doctrine:schema:validate --skip-sync
-
-
-Что меняется (сводка)
-Файл	Поле	Было	Стало
-User	$roles	#[ORM\Column]	type: Types::JSON, options: ['jsonb' => true]
-User	$createdAt	DATETIME_IMMUTABLE	+ options: ['default' => 'now()']
-User	$updatedAt	DATETIME_IMMUTABLE, nullable: true	(без изменений)
-Offer	$allowedCountries	type: Types::JSON	+ options: ['jsonb' => true, 'default' => '[]']
-Offer	$createdAt	DATETIME_IMMUTABLE	+ options: ['default' => 'now()']
-Affiliate	$balance	DECIMAL, precision: 12, scale: 2	+ options: ['default' => '0.00']
-Affiliate	$createdAt	DATETIME_IMMUTABLE	+ options: ['default' => 'now()']
-Conversion	$clickId	length: 36	type: Types::GUID
-Conversion	$meta	type: Types::JSON	+ options: ['jsonb' => true, 'default' => '{}']
-Conversion	$createdAt	DATETIME_IMMUTABLE	+ options: ['default' => 'now()']
-Никаких изменений в логике методов — только маппинги.
+Сгенерировать CRUD для Offer
+```
+sudo docker compose exec php php bin/console make:admin:crud
+```

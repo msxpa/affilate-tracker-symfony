@@ -9,7 +9,8 @@ doctrine:
             timestamptz:
                 class: App\Doctrine\Type\TimestamptzType
         #schema_filter: ~^(?!clicks)~   # ← игнорировать все таблицы, начинающиеся с clicks
-        schema_filter: ~^(?!clicks|doctrine_migration_versions|messenger_messages)~
+        # schema_filter: ~^(?!clicks|doctrine_migration_versions|messenger_messages)~
+        schema_filter: ~^(?!clicks|clicks_id_seq|messenger_messages)~
 
 
         # IMPORTANT: You MUST configure your server version,
