@@ -6,6 +6,43 @@ sudo docker run --rm -v $(pwd)/backend:/app -w /app composer:latest \
      create-project symfony/skeleton:"7.4.*" .
 ```
 
+Этот пакет связывает Symfony Runtime с RoadRunner через PSR-7. Он поддерживает Symfony 5.4–8.x и PHP от 8.0.5. 
+packagist.org
+```
+sudo docker compose build app
+
+sudo docker compose run --rm --no-deps \
+  --entrypoint php app -m | grep -E '^(amqp|sockets)$'
+
+sudo docker compose run --rm --no-deps \
+  --entrypoint composer app \
+  require runtime/roadrunner-symfony-nyholm
+
+sudo docker compose up --build -d
+sudo docker compose logs -f app
+```
+
+### Изменения с RoadRunner
+```
+sudo docker compose exec app php bin/console cache:clear
+sudo docker compose restart app
+```
+
+RoadRunner — долгоживущий PHP-процесс. В отличие от PHP-FPM, он держит PHP workers запущенными между запросами.
+
+Когда ты меняешь код:
+- PHP-файлы на диске обновляются благодаря Docker bind mount.
+- Но уже запущенные workers могут продолжать использовать старое состояние приложения.
+- Symfony также может использовать кэш маршрутов и контейнера.
+
+```
+sudo docker compose exec app rr --version
+```
+
+```
+sudo docker compose restart app
+```
+
 ### Установка webapp pack через контейнер composer:  
 ```
 sudo docker run --rm \

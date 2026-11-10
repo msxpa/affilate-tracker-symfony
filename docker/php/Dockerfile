@@ -1,9 +1,19 @@
-#affiliate-tracker-symfony/docker/php/Dockerfile
-FROM php:8.4-fpm
+#docker/php/Dockerfile
+# ==========================================
+# Stage 1: RoadRunner binary
+# ==========================================
+FROM ghcr.io/roadrunner-server/roadrunner:3.0.0 AS roadrunner
 
-# Системные зависимости для сборки расширений
+# ==========================================
+# Stage 2: PHP CLI
+# ==========================================
+FROM php:8.4-cli
+
+# System dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
+    curl \
+    ca-certificates \
     unzip \
     libicu-dev \
     libzip-dev \
@@ -17,8 +27,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Встроенные расширения PHP (не требуют PECL)
-RUN docker-php-ext-install \
+# PHP extensions
+RUN docker-php-ext-install -j$(nproc) \
     intl \
     pdo_pgsql \
     pgsql \
@@ -27,43 +37,61 @@ RUN docker-php-ext-install \
     bcmath \
     sockets
 
-# Redis — из исходников GitHub (PECL не работает)
+# ==========================================
+# Redis extension
+# ==========================================
 ARG PHP_REDIS_VERSION=6.2.0
-RUN curl -L -o /tmp/redis.tar.gz "https://github.com/phpredis/phpredis/archive/refs/tags/${PHP_REDIS_VERSION}.tar.gz" \
-    && tar xfz /tmp/redis.tar.gz -C /tmp \
-    && rm -f /tmp/redis.tar.gz \
-    && mkdir -p /usr/src/php/ext/redis \
-    && cp -a /tmp/phpredis-${PHP_REDIS_VERSION}/. /usr/src/php/ext/redis/ \
-    && docker-php-ext-install redis \
-    && rm -rf /tmp/phpredis-${PHP_REDIS_VERSION}
 
-# AMQP — из исходников GitHub (v2.2.0)
+RUN curl -fsSL \
+    -o /tmp/redis.tar.gz \
+    "https://github.com/phpredis/phpredis/archive/refs/tags/${PHP_REDIS_VERSION}.tar.gz" \
+    && mkdir -p /usr/src/php/ext/redis \
+    && tar -xzf /tmp/redis.tar.gz \
+        --strip-components=1 \
+        -C /usr/src/php/ext/redis \
+    && docker-php-ext-install redis \
+    && rm -rf /tmp/redis.tar.gz
+
+# ==========================================
+# AMQP extension
+# ==========================================
 ARG PHP_AMQP_VERSION=2.2.0
-RUN curl -L -o /tmp/amqp.tar.gz "https://github.com/php-amqp/php-amqp/archive/refs/tags/v${PHP_AMQP_VERSION}.tar.gz" \
-    && tar xfz /tmp/amqp.tar.gz -C /tmp \
-    && rm -f /tmp/amqp.tar.gz \
+
+RUN curl -fsSL \
+    -o /tmp/amqp.tar.gz \
+    "https://github.com/php-amqp/php-amqp/archive/refs/tags/v${PHP_AMQP_VERSION}.tar.gz" \
     && mkdir -p /usr/src/php/ext/amqp \
-    && cp -a /tmp/php-amqp-${PHP_AMQP_VERSION}/. /usr/src/php/ext/amqp/ \
+    && tar -xzf /tmp/amqp.tar.gz \
+        --strip-components=1 \
+        -C /usr/src/php/ext/amqp \
     && cd /usr/src/php/ext/amqp \
     && phpize \
     && ./configure --with-librabbitmq \
     && make -j$(nproc) \
     && make install \
     && docker-php-ext-enable amqp \
-    && rm -rf /tmp/php-amqp-${PHP_AMQP_VERSION}
+    && rm -rf /tmp/amqp.tar.gz /usr/src/php/ext/amqp
 
+# ==========================================
+# RoadRunner binary
+# ==========================================
+COPY --from=roadrunner /usr/bin/rr /usr/local/bin/rr
+
+# ==========================================
 # Composer
+# ==========================================
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+# ==========================================
 # Symfony CLI
+# ==========================================
 RUN curl -sS https://get.symfony.com/cli/installer | bash \
     && mv /root/.symfony5/bin/symfony /usr/local/bin/symfony
 
 WORKDIR /var/www/html
 
-RUN chown -R www-data:www-data /var/www/html
+EXPOSE 8080
 
 USER www-data
 
-EXPOSE 9000
-CMD ["php-fpm"]
+CMD ["rr", "serve", "-c", ".rr.yaml"]

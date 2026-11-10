@@ -23,13 +23,10 @@ final class OfferCache
     // {
     //     return $this->cache->get('offer_'.$offerId, function (ItemInterface $item) use ($offerId): ?array {
     //         $item->expiresAfter(60);
-
     //         $offer = $this->offerRepository->find($offerId);
-
     //         if ($offer === null || !$offer->isActive()) {
     //             return null;
     //         }
-
     //         return [
     //             'id' => $offer->getId(),
     //             'destinationUrl' => $offer->getDestinationUrl(),
@@ -43,12 +40,12 @@ final class OfferCache
     public function getActiveOffer(int $offerId): ?array
     {
         $cached = $this->cache->get('offer_'.$offerId, function (ItemInterface $item) use ($offerId): array {
-            $item->expiresAfter(60);
+            $item->expiresAfter(60);   // TTL 60 секунд
 
             $offer = $this->offerRepository->find($offerId);
 
             if ($offer === null || !$offer->isActive()) {
-                return ['not_found' => true];
+                return ['not_found' => true];   // negative cache
             }
 
             return [
